@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: flight-reservation-app
+  name: flight-reservation-backend
   namespace: flight-reservation
   labels:
     app: flight-reservation-app
@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: flight-reservation-app
-        image: mayurwagh/flightreservation-new:latest
+        image: abhipraydh96/fly-back
         imagePullPolicy: Always
         ports:
         - containerPort: 8080
