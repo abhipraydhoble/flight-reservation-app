@@ -1,48 +1,51 @@
 # Flight Reservation System
 ---
-## Steps to deploy Application
-1. Clone this repository
-```shell
-git clone https://github.com/shubhamkalsait/Flight-reservation.git
-```
+### install jenkins server
+````
+sudo apt update
+sudo apt install fontconfig openjdk-21-jre -y
+sudo wget -O /etc/apt/keyrings/jenkins-keyring.asc \
+  https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key
+echo "deb [signed-by=/etc/apt/keyrings/jenkins-keyring.asc]" \
+  https://pkg.jenkins.io/debian-stable binary/ | sudo tee \
+  /etc/apt/sources.list.d/jenkins.list > /dev/null
+sudo apt-get update
+sudo apt-get install jenkins -y
+````
+### install docker
+````
+sudo apt update -y
+sudo apt install docker.io -y
+sudo systemctl enable docker
+sudo systemctl start docker
+sudo usermod -aG docker jenkins
+sudo usermod -aG docker ubuntu
+newgrp docker
+sudo chmod 777 /var/run/docker.sock
+````
 
-2. Install Mysql Server and create database
-```shell
-apt update -y
-apt install mysql-server -y
-mysql_secure_installation
-mysql -uroot -p
->> create user linux identified by "Redhat";
->> grant all privileges on *.* to linux;
->> flush privileges;
->> create flightdb;
->> exit
-```
+### install maven
+````
+sudo apt install maven -y
+````
 
-3. Deploy Backend
-```shell
-cd Flight-reservation
-cd FlightReservationSystem
-apt install openjdk-17-jdk -y
-apt install maven -y
-export DATASOURCE_URL="jdbc:mysql://localhost:3306/flightdb"
-export DATASOURCE_USER="linux"
-export DATASOURCE_PASSWORD="Redhat"
-export FRONTEND_URL="http://localhost:80"
-mvn clean package
-java -jar target/flight*.jar
-```
-
-4. Deploy Frontend (open new tab)
-```shell
-cd Flight-reservation
-cd frontend
-apt install nodejs npm -y
-export VITE_API_URL=http://localhost:8080
-npm install
-npm run build
-apt install apache2 -y
-cp dist/* /var/www/html/
-systemctl start apache2
-```
-
+### install aws cli
+````
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+sudo apt install unzip 
+unzip awscliv2.zip
+sudo ./aws/install
+aws --version
+````
+### Install kubectl:
+````
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+````
+````
+sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+````
+````
+chmod +x kubectl
+mkdir -p ~/.local/bin
+mv ./kubectl ~/.local/bin/kubectl
+````
