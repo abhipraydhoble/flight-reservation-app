@@ -1,4 +1,4 @@
-# Flight Reservation System
+ # Flight Reservation System
 ---
 ## Setup project infrastructure using terraform modules
 **Refer repo:**
@@ -42,7 +42,7 @@ mysql --version
 
 Use the RDS endpoint, username, and password provided while creating the RDS instance.
 
-### 🔸 Syntax
+### 🔸 Syntax 
 
 ```bash
 mysql -h <RDS-ENDPOINT> -u admin -p
