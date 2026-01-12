@@ -281,125 +281,133 @@ cd /opt/sonar/bin/linux-x86-64
    - Server URL: http://your-sonarqube-server:9000
    - Authentication token: Use the sonar-token credential
 
-### 5. Environment Variables
-Update the following environment variables in the Jenkinsfile:
-```groovy
-environment {
-    DOCKER_REGISTRY = 'your-docker-registry'
-    DOCKER_IMAGE_NAME = 'flight-reservation-app'
-    DOCKER_IMAGE_TAG = "${BUILD_NUMBER}"
-    MAVEN_HOME = tool 'Maven'
-    JAVA_HOME = tool 'JDK17'
-    SONAR_HOST_URL = 'http://your-sonarqube-server:9000'
-    SONAR_TOKEN = credentials('sonar-token')
+
+
+## Setup project backend Pipeline
+
+```
+pipeline {
+    agent any
+
+    tools {
+        jdk 'JDK17'
+        maven 'Maven'
+        dockerTool 'Docker'
+    }
+
+    stages {
+        stage('Code-pull') {
+            steps {
+                git branch: 'main', url: 'https://github.com/abhipraydhoble/flight-reservation-app.git'
+            }
+        }
+
+        stage('Code-build') {
+            steps {
+                sh '''
+                    cd FlightReservationApplication
+                    mvn clean package -DskipTests
+                '''
+            }
+        }
+
+        stage('QA-TEST') {
+            steps {
+                withSonarQubeEnv('sonar') {
+                    sh '''
+                        cd FlightReservationApplication
+                        mvn sonar:sonar -Dsonar.projectKey=flight-reservation
+                    '''
+                }
+            }
+        }
+
+        stage('Docker-build') {
+            steps {
+                sh '''
+                    cd FlightReservationApplication
+                    docker build -t abhipraydh96/flight-backend .
+                '''
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                withCredentials([
+                    file(credentialsId: 'kube-config', variable: 'KUBECONFIG'),
+                    [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-cred']
+                ]) {
+                    sh '''
+                        cd FlightReservationApplication
+                        kubectl get nodes
+                        kubectl apply -f k8s/ns.yaml
+                    '''
+                }
+            }
+        }
+    }
+}
+```
+---
+
+## After Backned created add database endpoint in **application.properties and .env** and ````src/main/resource/application.properties```` of backned
+- also update image name in k8s/deployment.yaml file
+---
+
+## Setup project frontend
+
+Configure Tools
+- NodeJS (version 18.x)
+- Change Bucket name of pipeline
+
+```
+pipeline{
+    agent any
+    stages{
+        stage('code-pull'){
+            steps{
+                git branch: 'main', url: 'https://github.com/abhipraydhoble/flight-reservation-app.git'
+            }
+        }
+        stage('build'){
+            steps{
+                sh '''
+                    cd frontend
+                    npm install
+                    npm run build
+                '''
+            }
+        }
+        stage('Deploy'){
+            steps{
+                sh '''
+                    cd frontend
+                    aws s3 sync dist/ s3://flight-reservation-frontend/
+                '''
+            }
+        }
+    }
 }
 ```
 
+----
 
-## Pipeline Stages
+##  Frontend Pipeline Build then Add bucket policy to bucket
 
-The pipeline consists of the following stages:
+```
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "PublicReadGetObject",
+            "Effect": "Allow",
+            "Principal": "*",
+            "Action": "s3:GetObject",
+            "Resource": "arn:aws:s3:::your-bucket-name/*"
+        }
+    ]
+}
+```
+---
 
-1. **PULL**
-   - Checks out the source code from the repository
-
-2. **BUILD**
-   - Builds the application using Maven
-   - Skips tests during build phase
-
-3. **QA Test**
-   - Runs unit tests
-   - Generates JUnit test reports
-   - Generates JaCoCo coverage reports
-
-4. **SonarQube Analysis**
-   - Runs SonarQube scanner
-   - Analyzes code quality
-   - Generates code coverage reports
-
-5. **Quality Gate**
-   - Waits for SonarQube analysis to complete
-   - Checks quality gate status
-   - Fails pipeline if quality gate doesn't pass
-
-6. **DOCKER BUILD**
-   - Builds Docker image
-   - Tags image with build number
-
-7. **DOCKER PUSH**
-   - Pushes Docker image to registry
-   - Uses configured Docker credentials
-
-8. **DEPLOY**
-   - Deploys application to Kubernetes cluster
-   - Updates deployment with new image
-
-
-
-## Configure Pipeline Stages
-
-### Github Jenkins Interation
-- Create Webhook to source repo http://<Jenkins-Ip>:8080/github-webhook
-
-### Maven Stage 
-
-### Sonarqube Jenkins Integration
-- Install sonarqube scanner and Quality gate plugin in Jenkins
-- Create webhook in sonarqube http://<JENKINS_IP>:8080/sonarqube-webhook
-- Create local project and token in Sonarqube
-- Store token in Jenkins's Credentials
-- Configure Sonarqube server in Jenkins, Manage Jenkins > System > SonarQube Servers
-
-### Docker Build and Docker Push
-- Add jenkins user in docker group to allow jenkins to use docker commands
-
-### Kubectl Integration
-- Install AWS CLI
-- login using `aws configure`
-- update ~/.kube/config to authenticate with cluster
-`aws eks update-kubeconfig --name cbz-cluster-dev --region eu-west-2`
-- copy kubeconfig to jenkins user `cp -rf ~/.kube /var/lib/jenkins/`
-- allow jenkins to use kubeconfig `chown jenkins -R /var/lib/jenkins/.kube`
-
-### Create and update DB cred
-- Create DB with name flightdb
-- update DB credentials in application.properties
-
-## Post-Build Actions
-
-The pipeline includes the following post-build actions:
-- Success notification
-- Failure notification
-- Workspace cleanup
-
-## Running the Pipeline
-
-1. Create a new Pipeline job in Jenkins
-2. Configure the job to use the Jenkinsfile from SCM
-3. Set the SCM to Git and provide repository details
-4. Save and run the pipeline
-
-## Troubleshooting
-
-Common issues and solutions:
-
-1. **Docker Build Fails**
-   - Check Docker daemon is running
-   - Verify Docker credentials are correct
-   - Ensure Dockerfile is in the correct location
-
-2. **SonarQube Analysis Fails**
-   - Verify SonarQube server is running
-   - Check SonarQube token is valid
-   - Ensure project key is unique
-
-3. **Kubernetes Deployment Fails**
-   - Verify kubectl configuration
-   - Check namespace exists
-   - Ensure deployment name matches
-
-4. **Build Fails**
-   - Check Maven and JDK installation
-   - Verify pom.xml is valid
-   - Check for dependency issues
-
+## Copy  s3 bucket static website endpoint and check
