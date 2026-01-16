@@ -281,8 +281,20 @@ cd /opt/sonar/bin/linux-x86-64
    - Server URL: http://your-sonarqube-server:9000
    - Authentication token: Use the sonar-token credential
 
-
-
+### 5. Configure k8s
+1. Go to Manage Jenkins > Configure System
+2. select kind as secret file
+3. make sure you create and copy k8s config file on desktop
+4. select file and configure
+5. 
+### copy kubeconfig to jenkins user
+````
+cp -rf ~/.kube /var/lib/jenkins/
+````
+### allow jenkins to use kubeconfig
+````
+chown jenkins -R /var/lib/jenkins/.kube
+````
 ## Setup project backend Pipeline
 
 ```
